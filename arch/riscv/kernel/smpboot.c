@@ -30,7 +30,7 @@
 #include <linux/irq.h>
 #include <linux/of.h>
 #include <linux/sched/task_stack.h>
-#include <linux/smp.h>
+#include <linux/sched/hotplug.h>
 #include <asm/irq.h>
 #include <asm/mmu_context.h>
 #include <asm/tlbflush.h>
@@ -102,11 +102,17 @@ int __cpu_up(unsigned int cpu, struct task_struct *tidle)
 	if (cpu_ops.cpu_boot)
 		err = cpu_ops.cpu_boot(hartid, tidle);
 	if (!err) {
+
+#ifdef CONFIG_HOTPLUG_CPU
+		arch_send_call_function_single_ipi(cpu);
+#endif
 		while (!cpu_online(cpu))
 			cpu_relax();
+		pr_notice("CPU%u: online\n", cpu);
 	} else {
 		pr_err("CPU %d [hartid %d]failed to boot\n", cpu, hartid);
 	}
+
 	return 0;
 }
 
@@ -114,10 +120,98 @@ void __init smp_cpus_done(unsigned int max_cpus)
 {
 }
 
+#ifdef CONFIG_HOTPLUG_CPU
+int can_hotplug_cpu(void)
+{
+	if (cpu_ops.cpu_die)
+		return 1;
+	else
+		return 0;
+}
+
+/*
+ * __cpu_disable runs on the processor to be shutdown.
+ */
+int __cpu_disable(void)
+{
+	int ret = 0;
+	unsigned int cpu = smp_processor_id();
+
+	if (cpu_ops.cpu_disable)
+		ret = cpu_ops.cpu_disable(cpu);
+	if (ret)
+		return ret;
+
+	set_cpu_online(cpu, false);
+	irq_migrate_all_off_this_cpu();
+
+	return ret;
+}
+/*
+ * called on the thread which is asking for a CPU to be shutdown -
+ * waits until shutdown has completed, or it is timed out.
+ */
+void __cpu_die(unsigned int cpu)
+{
+	if (!cpu_wait_death(cpu, 5)) {
+		pr_err("CPU %u: didn't die\n", cpu);
+		return;
+	}
+	pr_notice("CPU%u: shutdown\n", cpu);
+	/*TODO: Do we need to verify is cpu is really dead */
+}
+
+int default_cpu_disable(unsigned int cpu)
+{
+	if (!cpu_ops.cpu_die)
+		return -EOPNOTSUPP;
+	return 0;
+}
+
+/*
+ * Called from the idle thread for the CPU which has been shutdown.
+ *
+ */
+void cpu_play_dead(void)
+{
+	int cpu = smp_processor_id();
+
+	idle_task_exit();
+
+	(void)cpu_report_death();
+
+	/* Do not disable software interrupt to restart cpu after WFI */
+	csr_clear(sie, SIE_STIE | SIE_SEIE);
+	if (cpu_ops.cpu_die)
+		cpu_ops.cpu_die(cpu);
+}
+
+void default_cpu_die(unsigned int cpu)
+{
+	int sipval, sieval, scauseval;
+
+	/* clear all pending flags */
+	csr_write(sip, 0);
+	/* clear any previous scause data */
+	csr_write(scause, 0);
+
+	do {
+		wait_for_interrupt();
+		sipval = csr_read(sip);
+		sieval = csr_read(sie);
+		scauseval = csr_read(scause);
+	/* only break if wfi returns for an enabled interrupt */
+	} while ((sipval & sieval) == 0 &&
+		 scauseval != INTERRUPT_CAUSE_SOFTWARE);
+
+	boot_sec_cpu();
+}
+
+#endif /* CONFIG_HOTPLUG_CPU */
 /*
  * C entry point for a secondary processor.
  */
-asmlinkage void __init smp_callin(void)
+asmlinkage void smp_callin(void)
 {
 	struct mm_struct *mm = &init_mm;
 
@@ -127,15 +221,18 @@ asmlinkage void __init smp_callin(void)
 
 	trap_init();
 	notify_cpu_starting(smp_processor_id());
-	set_cpu_online(smp_processor_id(), 1);
+	set_cpu_online(smp_processor_id(), true);
 	local_flush_tlb_all();
 	local_irq_enable();
 	preempt_disable();
 	cpu_startup_entry(CPUHP_AP_ONLINE_IDLE);
 }
 
-
 struct cpu_operations default_ops = {
 	.name		= "default",
 	.cpu_boot	= default_cpu_boot,
+#ifdef CONFIG_HOTPLUG_CPU
+	.cpu_disable	= default_cpu_disable,
+	.cpu_die	= default_cpu_die,
+#endif
 };

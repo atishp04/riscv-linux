@@ -81,6 +81,7 @@ EXPORT_SYMBOL(empty_zero_page);
 
 /* The lucky hart to first increment this variable will boot the other cores */
 atomic_t hart_lottery;
+static DEFINE_PER_CPU(struct cpu, cpu_devices);
 
 u64 __cpu_logical_map[NR_CPUS];
 
@@ -259,3 +260,17 @@ void __init setup_arch(char **cmdline_p)
 	riscv_fill_hwcap();
 }
 
+static int __init topology_init(void)
+{
+	int i;
+
+	for_each_possible_cpu(i) {
+		struct cpu *cpu = &per_cpu(cpu_devices, i);
+
+		cpu->hotpluggable = can_hotplug_cpu();
+		register_cpu(cpu, i);
+	}
+
+	return 0;
+}
+subsys_initcall(topology_init);

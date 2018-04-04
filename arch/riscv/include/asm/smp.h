@@ -33,6 +33,10 @@ struct cpu_operations {
 	int		(*cpu_init)(unsigned int);
 	int		(*cpu_prepare)(unsigned int);
 	int		(*cpu_boot)(unsigned int, struct task_struct *);
+#ifdef CONFIG_HOTPLUG_CPU
+	int		(*cpu_disable)(unsigned int cpu);
+	void		(*cpu_die)(unsigned int cpu);
+#endif
 };
 extern struct cpu_operations cpu_ops;
 void smp_set_cpu_ops(const struct cpu_operations *cpu_ops);
@@ -58,6 +62,18 @@ void cpuid_to_hartid_mask(const struct cpumask *in, struct cpumask *out);
  */
 #define raw_smp_processor_id() (*((int*)((char*)get_current() + TASK_TI_CPU)))
 
+#ifdef CONFIG_HOTPLUG_CPU
+int __cpu_disable(void);
+void __cpu_die(unsigned int cpu);
+void cpu_play_dead(void);
+void boot_sec_cpu(void);
+int can_hotplug_cpu(void);
+#else
+
+static inline int can_hotplug_cpu(void) { return 0; }
+
+#endif /* CONFIG_HOTPLUG_CPU */
+
 #else
 
 static inline int riscv_hartid_to_cpuid(int hartid) { return 0 ; }
@@ -65,7 +81,6 @@ static inline void cpuid_to_hartid_mask(const struct cpumask *in,
 				       struct cpumask *out) {
 	cpumask_set_cpu(cpu_logical_map(0), out);
 }
-
 
 #endif /* CONFIG_SMP */
 #endif /* _ASM_RISCV_SMP_H */
