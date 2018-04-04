@@ -149,6 +149,14 @@ relocate:
 	j .Lsecondary_park
 END(_start)
 
+.section .text
+.global boot_sec_cpu
+
+boot_sec_cpu:
+	/* Mask all interrupts */
+	csrw sie, zero
+	tail smp_callin
+
 __PAGE_ALIGNED_BSS
 	/* Empty zero page */
 	.balign PAGE_SIZE
