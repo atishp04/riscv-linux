@@ -35,6 +35,7 @@ static struct {
 enum ipi_message_type {
 	IPI_RESCHEDULE,
 	IPI_CALL_FUNC,
+	IPI_CALL_WAKEUP,
 	IPI_MAX
 };
 
@@ -120,6 +121,13 @@ void arch_send_call_function_single_ipi(int cpu)
 {
 	send_ipi_message(cpumask_of(cpu), IPI_CALL_FUNC);
 }
+
+#ifdef CONFIG_HOTPLUG_CPU
+void arch_send_call_wakeup_ipi(int cpu)
+{
+	send_ipi_message(cpumask_of(cpu), IPI_CALL_WAKEUP);
+}
+#endif
 
 static void ipi_stop(void *unused)
 {

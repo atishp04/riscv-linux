@@ -29,6 +29,14 @@
 extern unsigned long __cpu_logical_map[NR_CPUS];
 #define cpu_logical_map(cpu)    __cpu_logical_map[cpu]
 
+#if defined CONFIG_SMP && defined CONFIG_HOTPLUG_CPU
+void arch_send_call_wakeup_ipi(int cpu);
+bool can_hotplug_cpu(void);
+#else
+static inline bool can_hotplug_cpu(void) { return 0; }
+static inline void arch_send_call_wakeup_ipi(int cpu) { }
+#endif
+
 #ifdef CONFIG_SMP
 
 /* SMP initialization hook for setup_arch */
@@ -49,6 +57,13 @@ void riscv_cpuid_to_hartid_mask(const struct cpumask *in, struct cpumask *out);
  * ID.
  */
 #define raw_smp_processor_id() (*((int*)((char*)get_current() + TASK_TI_CPU)))
+
+#ifdef CONFIG_HOTPLUG_CPU
+int __cpu_disable(void);
+void __cpu_die(unsigned int cpu);
+void cpu_play_dead(void);
+void boot_sec_cpu(void);
+#endif /* CONFIG_HOTPLUG_CPU */
 
 #else
 
