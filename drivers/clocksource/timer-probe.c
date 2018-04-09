@@ -38,6 +38,7 @@ void __init timer_probe(void)
 
 		init_func_ret = match->data;
 
+		pr_err("%s: timer initialization function address [0x%x]\n",__func__, init_func_ret);
 		ret = init_func_ret(np);
 		if (ret) {
 			pr_err("Failed to initialize '%pOF': %d\n", np, ret);
@@ -46,9 +47,10 @@ void __init timer_probe(void)
 
 		timers++;
 	}
+	pr_err("%s: No of timers found before acpi probe [%u]\n",__func__,timers);
 
 	timers += acpi_probe_device_table(timer);
-
+	pr_err("%s: No of timers found [%u]\n",__func__, timers);
 	if (!timers)
 		pr_crit("%s: no matching timers found\n", __func__);
 }
