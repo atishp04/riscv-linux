@@ -34,7 +34,7 @@ void riscv_timer_interrupt(void)
 	 * handling cleanup.  See irq.c for more details.
 	 */
 	struct clock_event_device *evdev = this_cpu_ptr(&riscv_clock_event);
-
+	sbi_clear_tip();
 	evdev->event_handler(evdev);
 #endif
 }

@@ -25,6 +25,7 @@
 #define SBI_REMOTE_SFENCE_VMA 6
 #define SBI_REMOTE_SFENCE_VMA_ASID 7
 #define SBI_SHUTDOWN 8
+#define SBI_CLEAR_TIP 9
 
 #define SBI_CALL(which, arg0, arg1, arg2) ({			\
 	register uintptr_t a0 asm ("a0") = (uintptr_t)(arg0);	\
@@ -70,6 +71,11 @@ static inline void sbi_shutdown(void)
 static inline void sbi_clear_ipi(void)
 {
 	SBI_CALL_0(SBI_CLEAR_IPI);
+}
+
+static inline void sbi_clear_tip(void)
+{
+	SBI_CALL_0(SBI_CLEAR_TIP);
 }
 
 static inline void sbi_send_ipi(const unsigned long *hart_mask)
