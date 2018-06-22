@@ -75,9 +75,6 @@ void riscv_intc_irq(struct pt_regs *regs)
 	 * device interrupts use the generic IRQ mechanisms.
 	 */
 	switch (cause) {
-	case INTERRUPT_CAUSE_TIMER:
-		riscv_timer_interrupt();
-		break;
 	case INTERRUPT_CAUSE_SOFTWARE:
 		riscv_software_interrupt();
 		break;
@@ -96,7 +93,13 @@ static int riscv_irqdomain_map(struct irq_domain *d, unsigned int irq,
 {
 	struct riscv_irq_data *data = d->host_data;
 
-	irq_set_chip_and_handler(irq, &data->chip, handle_simple_irq);
+	if (hwirq == INTERRUPT_CAUSE_TIMER) {
+		irq_set_percpu_devid(irq);
+		irq_set_chip_and_handler(irq, &data->chip,
+					 handle_percpu_devid_irq);
+		irq_set_status_flags(irq, IRQ_NOAUTOEN);
+	} else
+		irq_set_chip_and_handler(irq, &data->chip, handle_simple_irq);
 	irq_set_chip_data(irq, data);
 	irq_set_noprobe(irq);
 	irq_set_affinity(irq, cpumask_of(data->hart));
