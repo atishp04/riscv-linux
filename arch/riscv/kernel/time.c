@@ -24,27 +24,6 @@
 
 unsigned long riscv_timebase;
 
-DECLARE_PER_CPU(struct clock_event_device, riscv_clock_event);
-
-void riscv_timer_interrupt(void)
-{
-#ifdef CONFIG_RISCV_TIMER
-	/*
-	 * FIXME: This needs to be cleaned up along with the rest of the IRQ
-	 * handling cleanup.  See irq.c for more details.
-	 */
-	struct clock_event_device *evdev = this_cpu_ptr(&riscv_clock_event);
-
-	/*
-	 * There are no direct SBI calls to clear pending timer interrupt bit.
-	 * Disable timer interrupt to ignore pending interrupt until next
-	 * interrupt.
-	 */
-	csr_clear(sie, SIE_STIE);
-	evdev->event_handler(evdev);
-#endif
-}
-
 static long __init timebase_frequency(void)
 {
 	struct device_node *cpu;

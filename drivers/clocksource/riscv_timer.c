@@ -15,9 +15,12 @@
 #include <linux/clocksource.h>
 #include <linux/clockchips.h>
 #include <linux/delay.h>
+#include <linux/interrupt.h>
 #include <linux/timer_riscv.h>
 #include <linux/sched_clock.h>
 #include <linux/cpu.h>
+#include <linux/of.h>
+#include <linux/of_irq.h>
 #include <asm/sbi.h>
 
 #define MINDELTA 100
@@ -73,6 +76,23 @@ DEFINE_PER_CPU(struct clocksource, riscv_clocksource) = {
 	.read = rdtime,
 };
 
+static irqreturn_t riscv_timer_interrupt(int irq, void *dev_id)
+{
+	struct clock_event_device *evdev = dev_id;
+#ifdef CONFIG_RISCV_TIMER
+
+	/*
+	 * There are no direct SBI calls to clear pending timer interrupt bit.
+	 * Disable timer interrupt to ignore pending interrupt until next
+	 * interrupt.
+	 */
+	csr_clear(sie, SIE_STIE);
+	evdev->event_handler(evdev);
+#endif
+	return IRQ_HANDLED;
+}
+
+
 static int hart_of_timer(struct device_node *dev)
 {
 	u32 hart;
@@ -94,12 +114,19 @@ static u64 notrace timer_riscv_sched_read(void)
 
 static int timer_riscv_starting_cpu(unsigned int cpu)
 {
+	int err;
 	struct clock_event_device *ce = per_cpu_ptr(&riscv_clock_event, cpu);
 
 	ce->cpumask = cpumask_of(cpu);
 	clockevents_config_and_register(ce, riscv_timebase, MINDELTA, MAXDELTA);
 	/* Enable timer interrupt for this cpu */
 	csr_set(sie, SIE_STIE);
+
+	err = request_irq(ce->irq, riscv_timer_interrupt,
+			  IRQF_TIMER | IRQF_NOBALANCING, "local_timer", ce);
+	if (err)
+		pr_err("local timer can't register for interrupt [%d] [%d]\n",
+			ce->irq, err);
 
 	return 0;
 }
@@ -115,8 +142,27 @@ static int timer_riscv_dying_cpu(unsigned int cpu)
 static int __init timer_riscv_init_dt(struct device_node *n)
 {
 	int err = 0;
-	int cpu_id = hart_of_timer(n);
-	struct clocksource *cs = per_cpu_ptr(&riscv_clocksource, cpu_id);
+	int cpu_id, timer_int;
+	struct device_node *parent;
+	struct clocksource *cs;
+	struct clock_event_device *ce;
+
+	timer_int = irq_of_parse_and_map(n, 0);
+	if (!timer_int) {
+		pr_err("Unable to find local timer irq\n");
+		return -EINVAL;
+	}
+
+	parent = of_get_parent(n);
+	if (!parent) {
+		pr_err("Parent of timer node doesn't exist\n");
+		return -EINVAL;
+	}
+	cpu_id = hart_of_timer(parent);
+
+	cs = per_cpu_ptr(&riscv_clocksource, cpu_id);
+	ce = per_cpu_ptr(&riscv_clock_event, cpu_id);
+	ce->irq = timer_int;
 
 	if (cpu_id == smp_processor_id()) {
 		clocksource_register_hz(cs, riscv_timebase);
@@ -125,11 +171,14 @@ static int __init timer_riscv_init_dt(struct device_node *n)
 		err = cpuhp_setup_state(CPUHP_AP_RISCV_TIMER_STARTING,
 			 "clockevents/riscv/timer:starting",
 			 timer_riscv_starting_cpu, timer_riscv_dying_cpu);
-		if (err)
+		if (err) {
 			pr_err("RISCV timer register failed [%d] for cpu = [%d]\n",
 			       err, cpu_id);
+			free_percpu_irq(ce->irq, ce);
+			return err;
+		}
 	}
 	return err;
 }
 
-TIMER_OF_DECLARE(riscv_timer, "riscv", timer_riscv_init_dt);
+TIMER_OF_DECLARE(riscv_timer, "riscv,local-timer", timer_riscv_init_dt);

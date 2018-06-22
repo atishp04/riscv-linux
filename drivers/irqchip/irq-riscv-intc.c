@@ -75,9 +75,6 @@ void riscv_intc_irq(struct pt_regs *regs)
 	 * device interrupts use the generic IRQ mechanisms.
 	 */
 	switch (cause) {
-	case INTERRUPT_CAUSE_TIMER:
-		riscv_timer_interrupt();
-		break;
 	case INTERRUPT_CAUSE_SOFTWARE:
 		riscv_software_interrupt();
 		break;
