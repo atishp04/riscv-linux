@@ -1,0 +1,35 @@
+* RISC-V local timer
+
+RISC-V supervisor manual specifies that timer interrupt is connected to
+individual harts directly to minimize the interrupt latency. These per
+hart timer is connected via Hart Level Interrupt Controller (HLIC). The
+HLIC will also act as the interrupt parent for timer interrupt.
+
+Required properties:
+
+- compatible : "riscv,local-timer"
+- interrupts : Should be Timer interrupt number. Current supervisor manual
+	       defines it be 5.
+- interrupt-parent : Should point to local interrupt-controller phandle.
+
+Example:
+	cpus {
+    		#address-cells = <0x00000001>;
+    		..
+		..
+		cpu@0 {
+      		..
+		..
+		timer {
+        		interrupts = <0x00000005>;
+        		interrupt-parent = <0x00000004>;
+        		compatible = "riscv,local-timer";
+      		}
+      		interrupt-controller {
+			..
+			..
+			compatible = "riscv,cpu-intc";
+			linux,phandle = <0x00000004>;
+			phandle = <0x00000004>;
+			}
+		}
