@@ -75,7 +75,7 @@ static DEFINE_SPINLOCK(plic_toggle_lock);
 
 static inline void plic_toggle(int ctxid, int hwirq, int enable)
 {
-	u32 __iomem *reg = plic_regs + ENABLE_BASE + ctxid * ENABLE_PER_HART;
+	u32 __iomem *reg = plic_regs + ENABLE_BASE + ctxid * ENABLE_PER_HART + (hwirq / 32) * 4;
 	u32 hwirq_mask = 1 << (hwirq % 32);
 
 	spin_lock(&plic_toggle_lock);
