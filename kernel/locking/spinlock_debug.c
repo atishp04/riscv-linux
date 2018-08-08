@@ -12,6 +12,7 @@
 #include <linux/debug_locks.h>
 #include <linux/delay.h>
 #include <linux/export.h>
+#include <linux/mm.h>
 
 void __raw_spin_lock_init(raw_spinlock_t *lock, const char *name,
 			  struct lock_class_key *key)
@@ -109,6 +110,8 @@ static inline void debug_spin_unlock(raw_spinlock_t *lock)
  */
 void do_raw_spin_lock(raw_spinlock_t *lock)
 {
+	if (!virt_addr_valid(lock))
+		dump_stack();
 	debug_spin_lock_before(lock);
 	arch_spin_lock(&lock->raw_lock);
 	debug_spin_lock_after(lock);

@@ -492,6 +492,7 @@ static void sync_rcu_exp_select_cpus(struct rcu_state *rsp,
 			continue;
 		}
 		INIT_WORK(&rnp->rew.rew_work, sync_rcu_exp_select_node_cpus);
+		pr_err("%s: In cpu = [%d]\n", __func__, rnp->grplo);
 		queue_work_on(rnp->grplo, rcu_par_gp_wq, &rnp->rew.rew_work);
 		rnp->exp_need_flush = true;
 	}
