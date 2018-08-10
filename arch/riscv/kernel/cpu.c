@@ -14,6 +14,7 @@
 #include <linux/init.h>
 #include <linux/seq_file.h>
 #include <linux/of.h>
+#include <asm/smp.h>
 
 /* Return -1 if not a valid hart */
 int riscv_of_processor_hart(struct device_node *node)
@@ -79,7 +80,8 @@ static void c_stop(struct seq_file *m, void *v)
 static int c_show(struct seq_file *m, void *v)
 {
 	unsigned long hart_id = (unsigned long)v - 1;
-	struct device_node *node = of_get_cpu_node(hart_id, NULL);
+	struct device_node *node = of_get_cpu_node(cpu_logical_map(hart_id),
+						   NULL);
 	const char *compat, *isa, *mmu;
 
 	seq_printf(m, "hart\t: %lu\n", hart_id);

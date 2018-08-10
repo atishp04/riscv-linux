@@ -84,6 +84,16 @@ atomic_t hart_lottery;
 
 u64 __cpu_logical_map[NR_CPUS];
 
+void __init smp_setup_processor_id(void)
+{
+	int cpu = smp_processor_id();
+
+	cpu_logical_map(0) = cpu;
+
+	/* Change the boot cpu ID in thread_info */
+	current->thread_info.cpu = 0;
+}
+
 #ifdef CONFIG_BLK_DEV_INITRD
 static void __init setup_initrd(void)
 {
