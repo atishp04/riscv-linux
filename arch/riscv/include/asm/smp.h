@@ -22,6 +22,12 @@
 #include <linux/cpumask.h>
 #include <linux/irqreturn.h>
 
+/*
+ * Mapping between linux logical cpu index and hartid.
+ */
+extern u64 __cpu_logical_map[NR_CPUS];
+#define cpu_logical_map(cpu)    __cpu_logical_map[cpu]
+
 #ifdef CONFIG_SMP
 
 /* SMP initialization hook for setup_arch */
@@ -33,6 +39,8 @@ void arch_send_call_function_ipi_mask(struct cpumask *mask);
 /* Hook for the generic smp_call_function_single() routine. */
 void arch_send_call_function_single_ipi(int cpu);
 
+int riscv_hartid_to_cpuid(int hartid);
+void cpuid_to_hartid_mask(const struct cpumask *in, struct cpumask *out);
 /*
  * This is particularly ugly: it appears we can't actually get the definition
  * of task_struct here, but we need access to the CPU this task is running on.
@@ -41,6 +49,13 @@ void arch_send_call_function_single_ipi(int cpu);
  */
 #define raw_smp_processor_id() (*((int*)((char*)get_current() + TASK_TI_CPU)))
 
-#endif /* CONFIG_SMP */
+#else
 
+static inline int riscv_hartid_to_cpuid(int hartid) { return 0 ; }
+static inline void cpuid_to_hartid_mask(const struct cpumask *in,
+				       struct cpumask *out) {
+	cpumask_set_cpu(cpu_logical_map(0), out);
+}
+
+#endif /* CONFIG_SMP */
 #endif /* _ASM_RISCV_SMP_H */
