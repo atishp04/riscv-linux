@@ -15,7 +15,7 @@
 #include <linux/of_irq.h>
 #include <linux/platform_device.h>
 #include <linux/spinlock.h>
-
+#include <linux/smp.h>
 /*
  * This driver implements a version of the RISC-V PLIC with the actual layout
  * specified in chapter 8 of the SiFive U5 Coreplex Series Manual:
@@ -93,10 +93,11 @@ static inline void plic_toggle(int ctxid, int hwirq, int enable)
 static inline void plic_irq_toggle(struct irq_data *d, int enable)
 {
 	int cpu;
+	struct plic_handler *handler;
 
 	writel(enable, plic_regs + PRIORITY_BASE + d->hwirq * PRIORITY_PER_ID);
 	for_each_cpu(cpu, irq_data_get_affinity_mask(d)) {
-		struct plic_handler *handler = per_cpu_ptr(&plic_handlers, cpu);
+		handler = per_cpu_ptr(&plic_handlers, cpu);
 
 		if (handler->present)
 			plic_toggle(handler->ctxid, d->hwirq, enable);
@@ -217,7 +218,7 @@ static int __init plic_init(struct device_node *node,
 		struct of_phandle_args parent;
 		struct plic_handler *handler;
 		irq_hw_number_t hwirq;
-		int cpu;
+		int cpu, hartid;
 
 		if (of_irq_parse_one(node, i, &parent)) {
 			pr_err("failed to parse parent for context %d.\n", i);
@@ -228,16 +229,15 @@ static int __init plic_init(struct device_node *node,
 		if (parent.args[0] == -1)
 			continue;
 
-		cpu = plic_find_hart_id(parent.np);
-		if (cpu < 0) {
+		hartid = plic_find_hart_id(parent.np);
+		if (hartid < 0) {
 			pr_warn("failed to parse hart ID for context %d.\n", i);
 			continue;
 		}
-
+		cpu = riscv_hartid_to_cpuid(hartid);
 		handler = per_cpu_ptr(&plic_handlers, cpu);
 		handler->present = true;
 		handler->ctxid = i;
-
 		/* priority must be > threshold to trigger an interrupt */
 		writel(0, plic_hart_offset(i) + CONTEXT_THRESHOLD);
 		for (hwirq = 1; hwirq <= nr_irqs; hwirq++)
