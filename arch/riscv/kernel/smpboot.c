@@ -30,6 +30,7 @@
 #include <linux/irq.h>
 #include <linux/of.h>
 #include <linux/sched/task_stack.h>
+#include <linux/smp.h>
 #include <asm/irq.h>
 #include <asm/mmu_context.h>
 #include <asm/tlbflush.h>
@@ -38,6 +39,7 @@
 
 void *__cpu_up_stack_pointer[NR_CPUS];
 void *__cpu_up_task_pointer[NR_CPUS];
+struct cpu_operations default_ops;
 
 void __init smp_prepare_boot_cpu(void)
 {
@@ -53,6 +55,7 @@ void __init setup_smp(void)
 	int hart, found_boot_cpu = 0;
 	int cpuid = 1;
 
+	smp_set_cpu_ops(&default_ops);
 	while ((dn = of_find_node_by_type(dn, "cpu"))) {
 		hart = riscv_of_processor_hart(dn);
 
@@ -73,10 +76,8 @@ void __init setup_smp(void)
 	BUG_ON(!found_boot_cpu);
 }
 
-int __cpu_up(unsigned int cpu, struct task_struct *tidle)
+int default_cpu_boot(unsigned int hartid, struct task_struct *tidle)
 {
-	int hartid = cpu_logical_map(cpu);
-	tidle->thread_info.cpu = cpu;
 	/*
 	 * On RISC-V systems, all harts boot on their own accord.  Our _start
 	 * selects the first hart to boot the kernel and causes the remainder
@@ -84,13 +85,28 @@ int __cpu_up(unsigned int cpu, struct task_struct *tidle)
 	 * setup by that main hart.  Writing __cpu_up_stack_pointer signals to
 	 * the spinning harts that they can continue the boot process.
 	 */
-	smp_mb();
+
 	__cpu_up_stack_pointer[hartid] = task_stack_page(tidle) + THREAD_SIZE;
 	__cpu_up_task_pointer[hartid] = tidle;
+	return 0;
+}
 
-	while (!cpu_online(cpu))
-		cpu_relax();
+int __cpu_up(unsigned int cpu, struct task_struct *tidle)
+{
+	int err = -1;
+	int hartid = cpu_logical_map(cpu);
 
+	tidle->thread_info.cpu = cpu;
+	smp_mb();
+
+	if (cpu_ops.cpu_boot)
+		err = cpu_ops.cpu_boot(hartid, tidle);
+	if (!err) {
+		while (!cpu_online(cpu))
+			cpu_relax();
+	} else {
+		pr_err("CPU %d [hartid %d]failed to boot\n", cpu, hartid);
+	}
 	return 0;
 }
 
@@ -117,3 +133,9 @@ asmlinkage void __init smp_callin(void)
 	preempt_disable();
 	cpu_startup_entry(CPUHP_AP_ONLINE_IDLE);
 }
+
+
+struct cpu_operations default_ops = {
+	.name		= "default",
+	.cpu_boot	= default_cpu_boot,
+};

@@ -58,6 +58,14 @@ void cpuid_to_hartid_mask(const struct cpumask *in, struct cpumask *out)
 	for_each_cpu(cpu, in)
 		cpumask_set_cpu(cpu_logical_map(cpu), out);
 }
+struct cpu_operations cpu_ops __ro_after_init;
+
+void smp_set_cpu_ops(const struct cpu_operations *ops)
+{
+	if (ops)
+		cpu_ops = *ops;
+}
+
 /* Unsupported */
 int setup_profiling_timer(unsigned int multiplier)
 {

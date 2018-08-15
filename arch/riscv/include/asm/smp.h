@@ -28,6 +28,15 @@
 extern u64 __cpu_logical_map[NR_CPUS];
 #define cpu_logical_map(cpu)    __cpu_logical_map[cpu]
 
+struct cpu_operations {
+	const char	*name;
+	int		(*cpu_init)(unsigned int);
+	int		(*cpu_prepare)(unsigned int);
+	int		(*cpu_boot)(unsigned int, struct task_struct *);
+};
+extern struct cpu_operations cpu_ops;
+void smp_set_cpu_ops(const struct cpu_operations *cpu_ops);
+
 #ifdef CONFIG_SMP
 
 /* SMP initialization hook for setup_arch */
@@ -56,6 +65,7 @@ static inline void cpuid_to_hartid_mask(const struct cpumask *in,
 				       struct cpumask *out) {
 	cpumask_set_cpu(cpu_logical_map(0), out);
 }
+
 
 #endif /* CONFIG_SMP */
 #endif /* _ASM_RISCV_SMP_H */
