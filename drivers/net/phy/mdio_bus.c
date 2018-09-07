@@ -94,9 +94,6 @@ int mdiobus_register_device(struct mdio_device *mdiodev)
 		err = mdiobus_register_reset(mdiodev);
 		if (err)
 			return err;
-
-		/* Assert the reset signal */
-		mdio_device_reset(mdiodev, 1);
 	}
 
 	mdiodev->bus->mdio_map[mdiodev->addr] = mdiodev;
