@@ -32,6 +32,7 @@
 #include <linux/mmzone.h>
 #include <linux/smp.h>
 #include <linux/percpu.h>
+#include <linux/arch_topology.h>
 #include <asm/topology.h>
 
 #ifndef nr_cpus_node
