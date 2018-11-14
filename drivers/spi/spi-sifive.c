@@ -380,6 +380,11 @@ static int sifive_spi_probe(struct platform_device *pdev)
 	master->set_cs = sifive_spi_set_cs;
 	master->transfer_one = sifive_spi_transfer_one;
 
+	/* If mmc_spi sees a dma_mask, it starts using dma mapped buffers.
+	 * Probably it should rely on the SPI core auto mapping instead.
+	 */
+	pdev->dev.dma_mask = NULL;
+
 	/* Configure the SPI master hardware */
 	sifive_spi_init(spi);
 
