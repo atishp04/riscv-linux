@@ -1254,6 +1254,17 @@ static inline int is_arm_mapping_symbol(const char *str)
 }
 
 /*
+ * If a symbol name follows the convention for ELF-local symbols (i.e., the
+ * name begins with a ".L"), return true; otherwise false.  This is used to
+ * skip section mismatch reporting on ELF-local symbols, due to the risk of
+ * false positives.
+ */
+static inline int is_local_symbol(const char *str)
+{
+	return str[0] == '.' && str[1] == 'L';
+}
+
+/*
  * If there's no name there, ignore it; likewise, ignore it if it's
  * one of the magic symbols emitted used by current ARM tools.
  *
@@ -1533,6 +1544,9 @@ static void default_mismatch_handler(const char *modname, struct elf_info *elf,
 	fromsym = sym_name(elf, from);
 
 	if (strstarts(fromsym, "reference___initcall"))
+		return;
+
+	if (is_local_symbol(fromsym))
 		return;
 
 	tosec = sec_name(elf, get_secindex(elf, sym));
