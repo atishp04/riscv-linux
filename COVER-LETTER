@@ -1,0 +1,36 @@
+The cpu-map DT entry in ARM64 can describe the CPU topology in
+much better way compared to other existing approaches. RISC-V can
+easily adopt this binding to represent it's own CPU topology.
+Thus, both cpu-map DT binding and topology parsing code can be
+moved to a common location so that RISC-V or any other
+architecture can leverage that.
+
+The relevant discussion regarding unifying cpu topology can be
+found in [1].
+
+arch_topology seems to be a perfect place to move the common
+code. I have not introduced any functional changes in the moved
+code. The only downside in this approach is that the capacity
+code will be executed for RISC-V as well. But, it will exit
+immediately after not able to find the appropriate DT node. If
+the overhead is considered too much, we can always compile out
+capacity related functions under a different config for the
+architectures that do not support them.
+
+The patches have been tested for RISC-V and compile tested for
+ARM64 & x86.
+
+The socket change[2] is also now part of this series.
+
+[1] https://lkml.org/lkml/2018/11/6/19
+[2] https://lkml.org/lkml/2018/11/7/918
+
+QEMU changes for RISC-V topology are available at
+
+https://github.com/atishp04/riscv-qemu/tree/cpu_topo
+
+Apologies for the previous patch series with incorrect title and
+was sent only to kernel mailing list due to a bug in my config.
+Please ignore that.
+
+option-subject Unify CPU topology across ARM64 & RISC-V
