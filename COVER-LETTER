@@ -1,0 +1,16 @@
+The existing upstream kernel doesn't boot for non-smp
+configuration. This patch series address various issues
+with non-smp configurations.
+
+Tested on QEMU and HiFive Unleashed board.
+
+Changes from v1->v2
+
+1. Move the cpuid to hartd id map to smp.c from setup.c
+2. Split 3rd patch into several small patches based on
+   logical grouping.
+3. Added a new patch that fixes an issue in hwcap query.
+4. Changed the title of the patch series.
+
+option-subject Various SMP related fixes
+option-dry-run
