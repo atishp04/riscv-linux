@@ -1,0 +1,37 @@
+The existing upstream kernel doesn't boot for non-smp configuration.
+This patch series address various issues with non-smp configurations.
+
+The patch series is based on 5.0-rc7 + Johan's below mentioned patch
+series. Tested on both QEMU and HiFive Unleashed board using both
+OpenSBI & BBL.
+
+https://lore.kernel.org/lkml/20190118140308.9599-1-johan@kernel.org/   
+
+Changes from v5->v6
+1. Dropped driver patches as they have been accepted via drivers tree.
+
+Changes from v4->v5
+1. Continue processing other harts even if isa string is incorrect for
+   a single hart during HWCAP processing.
+
+Changes from v3->v4
+1. Fixed commit text length issues.
+2. Updated hwcap patch to use common capabilities of all harts.
+3. Rebased on Johan's patch series.
+
+Changes from v2->v3
+
+1. Fixed spurious white space.
+2. Added lockdep for smpboot completion variable.
+2. Added a sanity check for hwcap.
+
+Changes from v1->v2
+
+1. Move the cpuid to hartid map to smp.c from setup.c
+2. Split 3rd patch into several small patches based on
+   logical grouping.
+3. Added a new patch that fixes an issue in hwcap query.
+4. Changed the title of the patch series.
+
+option-subject Various SMP related fixes
+option-dry-run

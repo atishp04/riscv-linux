@@ -17,6 +17,7 @@
 
 #include "of_private.h"
 
+
 static struct device_node *kobj_to_device_node(struct kobject *kobj)
 {
 	return container_of(kobj, struct device_node, kobj);
