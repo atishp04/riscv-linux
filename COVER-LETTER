@@ -1,0 +1,7 @@
+The existing upstream kernel doesn't boot for non-smp
+configuration. This patch series address various issues
+with non-smp configurations.
+
+Tested on QEMU and HiFive Unleashed board.
+
+option-subject Non-smp configuration fix
