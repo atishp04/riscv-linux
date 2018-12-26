@@ -66,6 +66,11 @@ void __init setup_smp(void)
 			found_boot_cpu = 1;
 			continue;
 		}
+		if (cpuid >= NR_CPUS) {
+			pr_warn("Invalid cpuid [%d] for hartid [%d]\n",
+				cpuid, hart);
+			break;
+		}
 
 		cpuid_to_hartid_map(cpuid) = hart;
 		set_cpu_possible(cpuid, true);
@@ -95,7 +100,7 @@ int __cpu_up(unsigned int cpu, struct task_struct *tidle)
 	WRITE_ONCE(__cpu_up_task_pointer[hartid], tidle);
 
 	wait_for_completion_timeout(&cpu_running,
-					    msecs_to_jiffies(1000));
+				     msecs_to_jiffies(1000));
 
 	if (!cpu_online(cpu)) {
 		pr_crit("CPU%u: failed to come online\n", cpu);
