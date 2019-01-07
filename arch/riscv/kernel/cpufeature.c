@@ -20,6 +20,7 @@
 #include <linux/of.h>
 #include <asm/processor.h>
 #include <asm/hwcap.h>
+#include <asm/smp.h>
 
 unsigned long elf_hwcap __read_mostly;
 #ifdef CONFIG_FPU
@@ -43,12 +44,15 @@ void riscv_fill_hwcap(void)
 	elf_hwcap = 0;
 
 	/*
-	 * We don't support running Linux on hertergenous ISA systems.  For
-	 * now, we just check the ISA of the first "okay" processor.
+	 * We don't support running Linux on hertergenous ISA systems.
+	 * But first "okay" processor might not be the boot cpu.
+	 * Check the ISA of boot cpu.
 	 */
-	while ((node = of_find_node_by_type(node, "cpu")))
-		if (riscv_of_processor_hartid(node) >= 0)
+	while ((node = of_find_node_by_type(node, "cpu"))) {
+		if (riscv_of_processor_hartid(node) == boot_cpu_hartid)
 			break;
+	}
+
 	if (!node) {
 		pr_warning("Unable to find \"cpu\" devicetree entry");
 		return;
