@@ -1,14 +1,57 @@
-Assorted command line option fixes for RISC-V.
+The cpu-map DT entry in ARM can describe the CPU topology in much better
+way compared to other existing approaches. RISC-V can easily adopt this
+binding to represent its own CPU topology. Thus, both cpu-map DT
+binding and topology parsing code can be moved to a common location so
+that RISC-V or any other architecture can leverage that.
 
-Changes from v3->v4.
-1. Fixed few checkpatch warnings.
+The relevant discussion regarding unifying cpu topology can be found in
+[1].
 
-Changes from v2->v3.
-1. Merged patch 1 & 2 into one patch.
+arch_topology seems to be a perfect place to move the common code. I
+have not introduced any significant functional changes in the moved code.
+The only downside in this approach is that the capacity code will be
+executed for RISC-V as well. But, it will exit immediately after not
+able to find the appropriate DT node. If the overhead is considered too
+much, we can always compile out capacity related functions under a
+different config for the architectures that do not support them.
 
-Changes from v1->v2.
-1. Update pr_err string in patch (4/4) as per review.
+There was an opportunity to unify topology data structure for ARM32 done
+by patch 3/4. But, I refrained from making any other changes as I am not
+very well versed with original intention for some functions that
+are present in arch_topology.c. I hope this patch series can be served
+as a baseline for such changes in the future.
 
-option-subject Miscellaneous kernel command line fixes
-option-dryn-run
-option-prefix PATCH v4
+The patches have been tested for RISC-V and compile tested for ARM64,
+ARM32 & x86.
+
+The socket change[2] is also now part of this series.
+
+[1] https://lkml.org/lkml/2018/11/6/19
+[2] https://lkml.org/lkml/2018/11/7/918
+
+QEMU changes for RISC-V topology are available at
+
+https://github.com/atishp04/qemu/tree/riscv_topology_dt
+
+HiFive Unleashed DT with topology node is available here.
+https://github.com/atishp04/opensbi/tree/HiFive_unleashed_topology
+
+It can be verified with OpenSBI with following additional compile time
+option.
+
+FW_PAYLOAD_FDT="unleashed_topology.dtb"
+
+Changes from v3->v4
+1. Get rid of ARM32 specific information in topology strucuture.
+2. Remove redundant functions from ARM32 and use common code instead. 
+
+Changes from v2->v3
+1. Cover letter update with experiment DT for topology changes.
+2. Added the patch for [2].
+
+Changes from v1->v2
+1. ARM32 can now use the common code as well.
+
+option-subject Unify CPU topology across ARM & RISC-V 
+option-dry-run
+option-prefix RFT PATCH v4
