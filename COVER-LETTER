@@ -1,0 +1,14 @@
+Assorted command line option fixes for RISC-V.
+
+Changes from v3->v4.
+1. Fixed few checkpatch warnings.
+
+Changes from v2->v3.
+1. Merged patch 1 & 2 into one patch.
+
+Changes from v1->v2.
+1. Update pr_err string in patch (4/4) as per review.
+
+option-subject Miscellaneous kernel command line fixes
+option-dryn-run
+option-prefix PATCH v4
